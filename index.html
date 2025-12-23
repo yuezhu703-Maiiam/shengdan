@@ -1,0 +1,93 @@
+// App.tsx
+import React, { useState, useEffect } from 'react';
+import { Canvas } from '@react-three/fiber';
+import { OrbitControls, Environment, PerspectiveCamera } from '@react-three/drei';
+import { EffectComposer, Bloom, Noise, Vignette } from '@react-postprocessing/effect-composer';
+import { FoliageSystem } from './components/FoliageSystem';
+import { OrnamentSystem } from './components/OrnamentSystem';
+
+const ArixChristmasTree = () => {
+  // 控制状态机
+  const [treeState, setTreeState] = useState<'TREE_SHAPE' | 'EXPLODING' | 'REASSEMBLING'>('TREE_SHAPE');
+
+  // 简单的交互触发器
+  const toggleState = () => {
+    if (treeState === 'TREE_SHAPE') {
+      setTreeState('EXPLODING');
+    } else {
+      setTreeState('REASSEMBLING');
+      // 动画一点时间后回到静态，节省性能 (实际项目中可用 setTimeout 或回调)
+      setTimeout(() => setTreeState('TREE_SHAPE'), 3000);
+    }
+  };
+
+  return (
+    <div style={{ width: '100vw', height: '100vh', background: '#000502' }}>
+      <Canvas gl={{ antialias: false }} dpr={[1, 2]}>
+        <PerspectiveCamera makeDefault position={[0, 0, 18]} fov={45} />
+        
+        {/* 灯光设置：强调轮廓和金色的反射 */}
+        <ambientLight intensity={0.2} color="#004225" />
+        <spotLight position={[10, 20, 10]} angle={0.3} penumbra={1} intensity={2} color="#FFD700" castShadow />
+        <pointLight position={[-10, -5, -10]} intensity={1} color="#20B2AA" />
+
+        <group rotation={[0, 0, 0]}>
+          {/* 1. 针叶层 */}
+          <FoliageSystem count={8000} state={treeState} />
+          
+          {/* 2. 装饰层 - 金球 */}
+          <OrnamentSystem count={200} type="BAUBLE" state={treeState} />
+          
+          {/* 3. 装饰层 - 礼物盒 */}
+          <OrnamentSystem count={50} type="GIFT" state={treeState} />
+        </group>
+
+        {/* 环境贴图，用于金属反射 */}
+        <Environment preset="city" />
+        
+        <OrbitControls 
+          enablePan={false} 
+          autoRotate={treeState === 'TREE_SHAPE'} 
+          autoRotateSpeed={0.5} 
+          maxPolarAngle={Math.PI / 1.5}
+        />
+
+        {/* 后期处理：电影感 */}
+        <EffectComposer disableNormalPass>
+          <Bloom 
+            luminanceThreshold={0.4} // 只有较亮的部分发光
+            mipmapBlur 
+            intensity={1.5} // 强烈的辉光
+            radius={0.6}
+            color="#FFFACD" // 柠檬绸缎光
+          />
+          <Noise opacity={0.02} /> {/* 增加胶片颗粒感 */}
+          <Vignette eskil={false} offset={0.1} darkness={1.1} /> {/* 暗角聚焦 */}
+        </EffectComposer>
+      </Canvas>
+
+      {/* UI 交互层 */}
+      <div style={{ position: 'absolute', bottom: 50, left: '50%', transform: 'translateX(-50%)', textAlign: 'center' }}>
+        <button 
+          onClick={toggleState}
+          style={{
+            padding: '12px 32px',
+            background: 'rgba(0, 66, 37, 0.8)',
+            border: '1px solid #FFD700',
+            color: '#FFD700',
+            fontSize: '16px',
+            textTransform: 'uppercase',
+            letterSpacing: '2px',
+            cursor: 'pointer',
+            fontFamily: 'sans-serif',
+            backdropFilter: 'blur(5px)'
+          }}
+        >
+          {treeState === 'TREE_SHAPE' ? 'Explode' : 'Assemble'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default ArixChristmasTree;
